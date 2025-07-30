@@ -1,16 +1,17 @@
 const Tracker = require('bittorrent-tracker');
 const express = require('express');
+const http = require('http');
 
 const clients = {}; // key → latest IP
 
 // BitTorrent tracker
-const server = new Tracker.Server({
+const tracker = new Tracker.Server({
   udp: false, // disable UDP for now (Render only supports TCP HTTP)
   http: true,
   ws: false
 });
 
-server.on('start', (addr) => {
+tracker.on('start', (addr) => {
   const ip = addr.address;
   const key = addr.peerId?.toString('hex')?.slice(-8) || 'unknown';
   clients[key] = { ip, ts: Date.now() };
@@ -31,10 +32,13 @@ app.get('/events', (req, res) => {
   req.on('close', () => clearInterval(interval));
 });
 
-app.listen(10000, () => {
-  console.log('Event server running on port 10000');
-});
+// Combine Express and tracker onto one HTTP port for Render
+const PORT = process.env.PORT || 10000;
+const httpServer = http.createServer(app);
 
-server.listen(10001, () => {
-  console.log('HTTP tracker running on port 10001');
+// Mount tracker announce endpoint on the same HTTP server
+tracker.listen({ server: httpServer });
+
+httpServer.listen(PORT, () => {
+  console.log(`Tracker and event stream listening on port ${PORT}`);
 });
