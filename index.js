@@ -11,11 +11,29 @@ const tracker = new Tracker.Server({
   ws: false
 });
 
-tracker.on('start', (addr) => {
-  const ip = addr.address;
-  const key = addr.peerId?.toString('hex')?.slice(-8) || 'unknown';
+// Add debugging for all tracker events
+tracker.on('start', (addr, params) => {
+  console.log(`[DEBUG] Start event - addr:`, addr, 'params:', params);
+  const ip = addr.split(':')[0]; // Extract IP from "ip:port" format
+  const key = params?.peer_id?.toString('hex')?.slice(-8) || 'unknown';
   clients[key] = { ip, ts: Date.now() };
   console.log(`[+] ${key} announced from ${ip}`);
+});
+
+tracker.on('update', (addr, params) => {
+  console.log(`[DEBUG] Update event - addr:`, addr, 'params:', params);
+  const ip = addr.split(':')[0];
+  const key = params?.peer_id?.toString('hex')?.slice(-8) || 'unknown';
+  clients[key] = { ip, ts: Date.now() };
+  console.log(`[+] ${key} updated from ${ip}`);
+});
+
+tracker.on('complete', (addr, params) => {
+  console.log(`[DEBUG] Complete event - addr:`, addr, 'params:', params);
+  const ip = addr.split(':')[0];
+  const key = params?.peer_id?.toString('hex')?.slice(-8) || 'unknown';
+  clients[key] = { ip, ts: Date.now() };
+  console.log(`[+] ${key} completed from ${ip}`);
 });
 
 // Event stream server
