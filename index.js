@@ -4,12 +4,15 @@ const http = require('http');
 
 const clients = {}; // key → latest IP
 
-// BitTorrent tracker
+// BitTorrent tracker - explicitly disable UDP and WebSocket for Render
 const tracker = new Tracker.Server({
-  udp: false, // disable UDP for now (Render only supports TCP HTTP)
-  http: true,
-  ws: false
+  udp: false,    // Disable UDP (Render doesn't support UDP)
+  http: true,    // Enable HTTP only
+  ws: false,     // Disable WebSocket 
+  stats: false   // Disable stats server (extra HTTP endpoint)
 });
+
+console.log('BitTorrent tracker created with HTTP-only configuration');
 
 // Add debugging for all tracker events
 tracker.on('start', (addr, params) => {
@@ -38,25 +41,56 @@ tracker.on('complete', (addr, params) => {
 
 // Event stream server
 const app = express();
+
+// Health check endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    tracker: 'running',
+    clients: Object.keys(clients).length,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Events endpoint for IP detection polling
 app.get('/events', (req, res) => {
   const key = req.query.key;
+  console.log(`[EVENTS] Client polling for key: ${key}`);
+  
   res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  
   const interval = setInterval(() => {
     const entry = clients[key];
     if (entry) {
+      console.log(`[EVENTS] Sending data for key ${key}:`, entry);
       res.write(`data: ${JSON.stringify(entry)}\n\n`);
     }
   }, 2000);
-  req.on('close', () => clearInterval(interval));
+  
+  req.on('close', () => {
+    console.log(`[EVENTS] Client disconnected for key: ${key}`);
+    clearInterval(interval);
+  });
 });
 
 // Combine Express and tracker onto one HTTP port for Render
 const PORT = process.env.PORT || 10000;
 const httpServer = http.createServer(app);
 
-// Mount tracker announce endpoint on the same HTTP server
-tracker.listen({ server: httpServer });
+console.log(`Starting server on port ${PORT}`);
 
-httpServer.listen(PORT, () => {
-  console.log(`Tracker and event stream listening on port ${PORT}`);
+// Mount tracker announce endpoint on the same HTTP server
+tracker.listen({ 
+  server: httpServer,
+  port: PORT // Explicitly set port
+});
+
+console.log('Tracker configured, starting HTTP server...');
+
+httpServer.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Tracker and event stream listening on port ${PORT}`);
+  console.log(`📍 Announce URL: https://remote-tracker.onrender.com/announce`);
+  console.log(`📊 Events URL: https://remote-tracker.onrender.com/events`);
 });
