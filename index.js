@@ -52,27 +52,30 @@ app.get('/', (req, res) => {
   });
 });
 
-// Events endpoint for IP detection polling
+// Test announce endpoint manually
+app.get('/test-announce', (req, res) => {
+  res.json({
+    message: 'Announce endpoint should be handled by bittorrent-tracker',
+    note: 'Try GET /announce with proper BitTorrent parameters',
+    clients: clients
+  });
+});
+
+// Simple polling endpoint instead of Server-Sent Events
 app.get('/events', (req, res) => {
   const key = req.query.key;
-  console.log(`[EVENTS] Client polling for key: ${key}`);
+  console.log(`[EVENTS] Polling request for key: ${key}`);
   
-  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Content-Type', 'application/json');
   res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
   
-  const interval = setInterval(() => {
-    const entry = clients[key];
-    if (entry) {
-      console.log(`[EVENTS] Sending data for key ${key}:`, entry);
-      res.write(`data: ${JSON.stringify(entry)}\n\n`);
-    }
-  }, 2000);
-  
-  req.on('close', () => {
-    console.log(`[EVENTS] Client disconnected for key: ${key}`);
-    clearInterval(interval);
-  });
+  const entry = clients[key];
+  if (entry) {
+    console.log(`[EVENTS] Returning data for key ${key}:`, entry);
+    res.json({ success: true, data: entry });
+  } else {
+    res.json({ success: false, message: 'No data for key' });
+  }
 });
 
 // Combine Express and tracker onto one HTTP port for Render
