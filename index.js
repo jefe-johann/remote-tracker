@@ -16,7 +16,7 @@ console.log('BitTorrent tracker created with HTTP-only configuration');
 
 // Track tracker events
 tracker.on('start', (addr, params) => {
-  const ip = addr.split(':')[0];
+  const rawIp = addr.split(':')[0]; // Extract IP part (before port)
   const infoHashHex = params?.info_hash?.toString('hex');
   const key = infoHashHex?.slice(-8) || 'unknown';
   
@@ -25,15 +25,20 @@ tracker.on('start', (addr, params) => {
     clients[key] = { ips: new Set(), ts: Date.now() };
   }
   
-  // Add IP to set and update timestamp
-  clients[key].ips.add(ip);
+  // Parse multiple IPs if comma-separated
+  const ips = rawIp.split(',').map(ip => ip.trim()).filter(ip => ip.length > 0);
+  
+  // Add each IP individually to the set
+  ips.forEach(ip => {
+    clients[key].ips.add(ip);
+  });
   clients[key].ts = Date.now();
   
-  console.log(`[+] IP detected: ${ip} (session: ${key}, total: ${clients[key].ips.size})`);
+  console.log(`[+] IP(s) detected: ${ips.join(', ')} (session: ${key}, total: ${clients[key].ips.size})`);
 });
 
 tracker.on('update', (addr, params) => {
-  const ip = addr.split(':')[0];
+  const rawIp = addr.split(':')[0]; // Extract IP part (before port)
   const infoHashHex = params?.info_hash?.toString('hex');
   const key = infoHashHex?.slice(-8) || 'unknown';
   
@@ -42,15 +47,20 @@ tracker.on('update', (addr, params) => {
     clients[key] = { ips: new Set(), ts: Date.now() };
   }
   
-  // Add IP to set and update timestamp
-  clients[key].ips.add(ip);
+  // Parse multiple IPs if comma-separated
+  const ips = rawIp.split(',').map(ip => ip.trim()).filter(ip => ip.length > 0);
+  
+  // Add each IP individually to the set
+  ips.forEach(ip => {
+    clients[key].ips.add(ip);
+  });
   clients[key].ts = Date.now();
   
-  console.log(`[+] IP updated: ${ip} (session: ${key}, total: ${clients[key].ips.size})`);
+  console.log(`[+] IP(s) updated: ${ips.join(', ')} (session: ${key}, total: ${clients[key].ips.size})`);
 });
 
 tracker.on('complete', (addr, params) => {
-  const ip = addr.split(':')[0];
+  const rawIp = addr.split(':')[0]; // Extract IP part (before port)
   const infoHashHex = params?.info_hash?.toString('hex');
   const key = infoHashHex?.slice(-8) || 'unknown';
   
@@ -59,11 +69,16 @@ tracker.on('complete', (addr, params) => {
     clients[key] = { ips: new Set(), ts: Date.now() };
   }
   
-  // Add IP to set and update timestamp
-  clients[key].ips.add(ip);
+  // Parse multiple IPs if comma-separated
+  const ips = rawIp.split(',').map(ip => ip.trim()).filter(ip => ip.length > 0);
+  
+  // Add each IP individually to the set
+  ips.forEach(ip => {
+    clients[key].ips.add(ip);
+  });
   clients[key].ts = Date.now();
   
-  console.log(`[+] IP complete: ${ip} (session: ${key}, total: ${clients[key].ips.size})`);
+  console.log(`[+] IP(s) complete: ${ips.join(', ')} (session: ${key}, total: ${clients[key].ips.size})`);
 });
 
 // Event stream server
