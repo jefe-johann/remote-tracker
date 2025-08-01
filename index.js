@@ -18,7 +18,8 @@ console.log('BitTorrent tracker created with HTTP-only configuration');
 tracker.on('start', (addr, params) => {
   const rawIp = addr.split(':')[0]; // Extract IP part (before port)
   const infoHashHex = params?.info_hash?.toString('hex');
-  const key = infoHashHex?.slice(-8) || 'unknown';
+  // Support both old 8-char keys (last 8 of hash) and new 16-char session keys (first 16 of hash)
+  const key = infoHashHex?.slice(0, 16) || 'unknown';
   
   // Initialize session if doesn't exist
   if (!clients[key]) {
@@ -40,7 +41,8 @@ tracker.on('start', (addr, params) => {
 tracker.on('update', (addr, params) => {
   const rawIp = addr.split(':')[0]; // Extract IP part (before port)
   const infoHashHex = params?.info_hash?.toString('hex');
-  const key = infoHashHex?.slice(-8) || 'unknown';
+  // Support both old 8-char keys (last 8 of hash) and new 16-char session keys (first 16 of hash)
+  const key = infoHashHex?.slice(0, 16) || 'unknown';
   
   // Initialize session if doesn't exist
   if (!clients[key]) {
@@ -62,7 +64,8 @@ tracker.on('update', (addr, params) => {
 tracker.on('complete', (addr, params) => {
   const rawIp = addr.split(':')[0]; // Extract IP part (before port)
   const infoHashHex = params?.info_hash?.toString('hex');
-  const key = infoHashHex?.slice(-8) || 'unknown';
+  // Support both old 8-char keys (last 8 of hash) and new 16-char session keys (first 16 of hash)
+  const key = infoHashHex?.slice(0, 16) || 'unknown';
   
   // Initialize session if doesn't exist
   if (!clients[key]) {
