@@ -101,7 +101,16 @@ const httpServer = http.createServer((req, res) => {
   // Handle /announce requests with the tracker
   if (req.url.startsWith('/announce')) {
     console.log('🎯 Handling announce request with BitTorrent tracker');
-    tracker.onHttpRequest(req, res);
+    
+    // Extract the real IP from Cloudflare headers
+    const realIP = req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']?.split(',')[0] || req.connection.remoteAddress;
+    console.log(`🌍 Real client IP: ${realIP}`);
+    
+    // Override the request's remote address so the tracker sees the real IP
+    req.connection.remoteAddress = realIP;
+    req.socket.remoteAddress = realIP;
+    
+    tracker.onHttpRequest(req, res, { trustProxy: true });
   }
   // Handle all other requests with Express
   else {
