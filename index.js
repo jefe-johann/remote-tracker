@@ -18,25 +18,42 @@ console.log('BitTorrent tracker created with HTTP-only configuration');
 tracker.on('start', (addr, params) => {
   console.log(`[DEBUG] Start event - addr:`, addr, 'params:', params);
   const ip = addr.split(':')[0]; // Extract IP from "ip:port" format
-  const key = params?.peer_id?.toString('hex')?.slice(-8) || 'unknown';
+  
+  // Try multiple ways to get the session key
+  const peerIdHex = params?.peer_id?.toString('hex');
+  const infoHashHex = params?.info_hash?.toString('hex');
+  
+  console.log(`[DEBUG] peer_id hex: ${peerIdHex}`);
+  console.log(`[DEBUG] info_hash hex: ${infoHashHex}`);
+  
+  // Use info_hash for session key (matches our local app)
+  const key = infoHashHex?.slice(-8) || peerIdHex?.slice(-8) || 'unknown';
+  
   clients[key] = { ip, ts: Date.now() };
-  console.log(`[+] ${key} announced from ${ip}`);
+  console.log(`[+] Stored client data for key ${key}: ${ip} at ${new Date().toISOString()}`);
+  console.log(`[DEBUG] Current clients:`, clients);
 });
 
 tracker.on('update', (addr, params) => {
   console.log(`[DEBUG] Update event - addr:`, addr, 'params:', params);
   const ip = addr.split(':')[0];
-  const key = params?.peer_id?.toString('hex')?.slice(-8) || 'unknown';
+  const infoHashHex = params?.info_hash?.toString('hex');
+  const peerIdHex = params?.peer_id?.toString('hex');
+  const key = infoHashHex?.slice(-8) || peerIdHex?.slice(-8) || 'unknown';
+  
   clients[key] = { ip, ts: Date.now() };
-  console.log(`[+] ${key} updated from ${ip}`);
+  console.log(`[+] Updated client data for key ${key}: ${ip}`);
 });
 
 tracker.on('complete', (addr, params) => {
   console.log(`[DEBUG] Complete event - addr:`, addr, 'params:', params);
   const ip = addr.split(':')[0];
-  const key = params?.peer_id?.toString('hex')?.slice(-8) || 'unknown';
+  const infoHashHex = params?.info_hash?.toString('hex');
+  const peerIdHex = params?.peer_id?.toString('hex');
+  const key = infoHashHex?.slice(-8) || peerIdHex?.slice(-8) || 'unknown';
+  
   clients[key] = { ip, ts: Date.now() };
-  console.log(`[+] ${key} completed from ${ip}`);
+  console.log(`[+] Completed client data for key ${key}: ${ip}`);
 });
 
 // Event stream server
