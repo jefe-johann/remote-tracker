@@ -80,7 +80,6 @@ app.get('/events', (req, res) => {
 
 // Combine Express and tracker onto one HTTP port for Render
 const PORT = process.env.PORT || 10000;
-const httpServer = http.createServer(app);
 
 console.log(`Starting server on port ${PORT}`);
 
@@ -88,19 +87,32 @@ console.log(`Starting server on port ${PORT}`);
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} from ${req.ip}`);
   console.log('Headers:', req.headers);
+  
+  // Extract the real IP from Cloudflare headers
+  const realIP = req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']?.split(',')[0] || req.ip;
+  req.realIP = realIP;
+  console.log(`Real IP: ${realIP}`);
+  
   next();
 });
 
-// Mount tracker announce endpoint on the same HTTP server
-tracker.listen({ 
-  server: httpServer,
-  port: PORT // Explicitly set port
+// Create HTTP server that handles both Express and BitTorrent tracker
+const httpServer = http.createServer((req, res) => {
+  // Handle /announce requests with the tracker
+  if (req.url.startsWith('/announce')) {
+    console.log('🎯 Handling announce request with BitTorrent tracker');
+    tracker.onHttpRequest(req, res);
+  }
+  // Handle all other requests with Express
+  else {
+    app(req, res);
+  }
 });
 
-console.log('Tracker configured, starting HTTP server...');
+console.log('Starting HTTP server with custom request routing...');
 
 httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ Tracker and event stream listening on port ${PORT}`);
+  console.log(`✅ Server listening on port ${PORT}`);
   console.log(`📍 Announce URL: https://remote-tracker.onrender.com/announce`);
   console.log(`📊 Events URL: https://remote-tracker.onrender.com/events`);
 });
