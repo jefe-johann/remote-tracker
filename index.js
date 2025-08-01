@@ -84,6 +84,13 @@ const httpServer = http.createServer(app);
 
 console.log(`Starting server on port ${PORT}`);
 
+// Add middleware to log ALL requests
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} from ${req.ip}`);
+  console.log('Headers:', req.headers);
+  next();
+});
+
 // Mount tracker announce endpoint on the same HTTP server
 tracker.listen({ 
   server: httpServer,
