@@ -14,46 +14,32 @@ const tracker = new Tracker.Server({
 
 console.log('BitTorrent tracker created with HTTP-only configuration');
 
-// Add debugging for all tracker events
+// Track tracker events
 tracker.on('start', (addr, params) => {
-  console.log(`[DEBUG] Start event - addr:`, addr, 'params:', params);
-  const ip = addr.split(':')[0]; // Extract IP from "ip:port" format
-  
-  // Try multiple ways to get the session key
-  const peerIdHex = params?.peer_id?.toString('hex');
+  const ip = addr.split(':')[0];
   const infoHashHex = params?.info_hash?.toString('hex');
-  
-  console.log(`[DEBUG] peer_id hex: ${peerIdHex}`);
-  console.log(`[DEBUG] info_hash hex: ${infoHashHex}`);
-  
-  // Use info_hash for session key (matches our local app)
-  const key = infoHashHex?.slice(-8) || peerIdHex?.slice(-8) || 'unknown';
+  const key = infoHashHex?.slice(-8) || 'unknown';
   
   clients[key] = { ip, ts: Date.now() };
-  console.log(`[+] Stored client data for key ${key}: ${ip} at ${new Date().toISOString()}`);
-  console.log(`[DEBUG] Current clients:`, clients);
+  console.log(`[+] IP detected: ${ip} (session: ${key})`);
 });
 
 tracker.on('update', (addr, params) => {
-  console.log(`[DEBUG] Update event - addr:`, addr, 'params:', params);
   const ip = addr.split(':')[0];
   const infoHashHex = params?.info_hash?.toString('hex');
-  const peerIdHex = params?.peer_id?.toString('hex');
-  const key = infoHashHex?.slice(-8) || peerIdHex?.slice(-8) || 'unknown';
+  const key = infoHashHex?.slice(-8) || 'unknown';
   
   clients[key] = { ip, ts: Date.now() };
-  console.log(`[+] Updated client data for key ${key}: ${ip}`);
+  console.log(`[+] IP updated: ${ip} (session: ${key})`);
 });
 
 tracker.on('complete', (addr, params) => {
-  console.log(`[DEBUG] Complete event - addr:`, addr, 'params:', params);
   const ip = addr.split(':')[0];
   const infoHashHex = params?.info_hash?.toString('hex');
-  const peerIdHex = params?.peer_id?.toString('hex');
-  const key = infoHashHex?.slice(-8) || peerIdHex?.slice(-8) || 'unknown';
+  const key = infoHashHex?.slice(-8) || 'unknown';
   
   clients[key] = { ip, ts: Date.now() };
-  console.log(`[+] Completed client data for key ${key}: ${ip}`);
+  console.log(`[+] IP complete: ${ip} (session: ${key})`);
 });
 
 // Event stream server
@@ -78,17 +64,15 @@ app.get('/test-announce', (req, res) => {
   });
 });
 
-// Simple polling endpoint instead of Server-Sent Events
+// Polling endpoint for IP detection data
 app.get('/events', (req, res) => {
   const key = req.query.key;
-  console.log(`[EVENTS] Polling request for key: ${key}`);
   
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Cache-Control', 'no-cache');
   
   const entry = clients[key];
   if (entry) {
-    console.log(`[EVENTS] Returning data for key ${key}:`, entry);
     res.json({ success: true, data: entry });
   } else {
     res.json({ success: false, message: 'No data for key' });
@@ -100,16 +84,10 @@ const PORT = process.env.PORT || 10000;
 
 console.log(`Starting server on port ${PORT}`);
 
-// Add middleware to log ALL requests
+// Extract real IP from proxy headers
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} from ${req.ip}`);
-  console.log('Headers:', req.headers);
-  
-  // Extract the real IP from Cloudflare headers
   const realIP = req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']?.split(',')[0] || req.ip;
   req.realIP = realIP;
-  console.log(`Real IP: ${realIP}`);
-  
   next();
 });
 
@@ -117,11 +95,8 @@ app.use((req, res, next) => {
 const httpServer = http.createServer((req, res) => {
   // Handle /announce requests with the tracker
   if (req.url.startsWith('/announce')) {
-    console.log('🎯 Handling announce request with BitTorrent tracker');
-    
     // Extract the real IP from Cloudflare headers
     const realIP = req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']?.split(',')[0] || req.connection.remoteAddress;
-    console.log(`🌍 Real client IP: ${realIP}`);
     
     // Override the request's remote address so the tracker sees the real IP
     req.connection.remoteAddress = realIP;
@@ -135,7 +110,6 @@ const httpServer = http.createServer((req, res) => {
   }
 });
 
-console.log('Starting HTTP server with custom request routing...');
 
 httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Server listening on port ${PORT}`);
