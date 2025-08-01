@@ -2,7 +2,7 @@ const Tracker = require('bittorrent-tracker');
 const express = require('express');
 const http = require('http');
 
-const clients = {}; // key → latest IP
+const clients = {}; // key → Set of unique IPs
 
 // BitTorrent tracker - explicitly disable UDP and WebSocket for Render
 const tracker = new Tracker.Server({
@@ -20,8 +20,16 @@ tracker.on('start', (addr, params) => {
   const infoHashHex = params?.info_hash?.toString('hex');
   const key = infoHashHex?.slice(-8) || 'unknown';
   
-  clients[key] = { ip, ts: Date.now() };
-  console.log(`[+] IP detected: ${ip} (session: ${key})`);
+  // Initialize session if doesn't exist
+  if (!clients[key]) {
+    clients[key] = { ips: new Set(), ts: Date.now() };
+  }
+  
+  // Add IP to set and update timestamp
+  clients[key].ips.add(ip);
+  clients[key].ts = Date.now();
+  
+  console.log(`[+] IP detected: ${ip} (session: ${key}, total: ${clients[key].ips.size})`);
 });
 
 tracker.on('update', (addr, params) => {
@@ -29,8 +37,16 @@ tracker.on('update', (addr, params) => {
   const infoHashHex = params?.info_hash?.toString('hex');
   const key = infoHashHex?.slice(-8) || 'unknown';
   
-  clients[key] = { ip, ts: Date.now() };
-  console.log(`[+] IP updated: ${ip} (session: ${key})`);
+  // Initialize session if doesn't exist
+  if (!clients[key]) {
+    clients[key] = { ips: new Set(), ts: Date.now() };
+  }
+  
+  // Add IP to set and update timestamp
+  clients[key].ips.add(ip);
+  clients[key].ts = Date.now();
+  
+  console.log(`[+] IP updated: ${ip} (session: ${key}, total: ${clients[key].ips.size})`);
 });
 
 tracker.on('complete', (addr, params) => {
@@ -38,8 +54,16 @@ tracker.on('complete', (addr, params) => {
   const infoHashHex = params?.info_hash?.toString('hex');
   const key = infoHashHex?.slice(-8) || 'unknown';
   
-  clients[key] = { ip, ts: Date.now() };
-  console.log(`[+] IP complete: ${ip} (session: ${key})`);
+  // Initialize session if doesn't exist
+  if (!clients[key]) {
+    clients[key] = { ips: new Set(), ts: Date.now() };
+  }
+  
+  // Add IP to set and update timestamp
+  clients[key].ips.add(ip);
+  clients[key].ts = Date.now();
+  
+  console.log(`[+] IP complete: ${ip} (session: ${key}, total: ${clients[key].ips.size})`);
 });
 
 // Event stream server
@@ -72,8 +96,17 @@ app.get('/events', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache');
   
   const entry = clients[key];
-  if (entry) {
-    res.json({ success: true, data: entry });
+  if (entry && entry.ips.size > 0) {
+    // Return each unique IP separately
+    const ips = Array.from(entry.ips);
+    res.json({ 
+      success: true, 
+      data: {
+        ips: ips,
+        count: ips.length,
+        ts: entry.ts
+      }
+    });
   } else {
     res.json({ success: false, message: 'No data for key' });
   }
