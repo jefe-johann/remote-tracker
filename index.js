@@ -9,7 +9,8 @@ const tracker = new Tracker.Server({
   udp: false,    // Disable UDP (Render doesn't support UDP)
   http: true,    // Enable HTTP only
   ws: false,     // Disable WebSocket 
-  stats: false   // Disable stats server (extra HTTP endpoint)
+  stats: false,  // Disable stats server (extra HTTP endpoint)
+  interval: 60000 // Tell clients to announce every 60 seconds (1 minute) for continuous monitoring
 });
 
 console.log('BitTorrent tracker created with HTTP-only configuration');
