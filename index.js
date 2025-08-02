@@ -147,12 +147,46 @@ app.use((req, res, next) => {
 const httpServer = http.createServer((req, res) => {
   // Handle /announce requests with the tracker
   if (req.url.startsWith('/announce')) {
+    const clientIP = req.headers['cf-connecting-ip'] || req.connection.remoteAddress;
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    console.log(`[Tracker] ${new Date().toISOString()} - Announce request from ${clientIP}`);
+    console.log(`[Tracker] ${new Date().toISOString()} - Request params:`, {
+      event: url.searchParams.get('event'),
+      info_hash: url.searchParams.get('info_hash'),
+      peer_id: url.searchParams.get('peer_id'),
+      port: url.searchParams.get('port'),
+      uploaded: url.searchParams.get('uploaded'),
+      downloaded: url.searchParams.get('downloaded'),
+      left: url.searchParams.get('left')
+    });
+    
     // Extract the real IP from Cloudflare headers
     const realIP = req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']?.split(',')[0] || req.connection.remoteAddress;
     
     // Override the request's remote address so the tracker sees the real IP
     req.connection.remoteAddress = realIP;
     req.socket.remoteAddress = realIP;
+    
+    // Intercept the response to log what we're sending back
+    const originalEnd = res.end;
+    res.end = function(chunk) {
+      if (chunk) {
+        console.log(`[Tracker] ${new Date().toISOString()} - Response body length: ${chunk.length} bytes`);
+        // Try to log if it's a bencode response (BitTorrent format)
+        try {
+          const decoded = require('bencode').decode(chunk);
+          console.log(`[Tracker] ${new Date().toISOString()} - Response data:`, {
+            interval: decoded.interval,
+            'min interval': decoded['min interval'],
+            complete: decoded.complete,
+            incomplete: decoded.incomplete
+          });
+        } catch (e) {
+          console.log(`[Tracker] ${new Date().toISOString()} - Non-bencode response (probably error)`);
+        }
+      }
+      originalEnd.call(this, chunk);
+    };
     
     tracker.onHttpRequest(req, res, { trustProxy: true });
   }
