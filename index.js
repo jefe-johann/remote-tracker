@@ -36,7 +36,7 @@ tracker.on('start', (addr, params) => {
   });
   clients[key].ts = Date.now(); // Always update timestamp on every announce
   
-  console.log(`[+] IP(s) detected: ${ips.join(', ')} (session: ${key}, total: ${clients[key].ips.size})`);
+  console.log(`[+] IP(s) detected: ${ips.join(', ')} (session: ${key}, total: ${clients[key].ips.size}, timestamp: ${clients[key].ts})`);
 });
 
 tracker.on('update', (addr, params) => {
@@ -59,7 +59,7 @@ tracker.on('update', (addr, params) => {
   });
   clients[key].ts = Date.now(); // Always update timestamp on every announce
   
-  console.log(`[+] IP(s) updated: ${ips.join(', ')} (session: ${key}, total: ${clients[key].ips.size})`);
+  console.log(`[+] IP(s) updated: ${ips.join(', ')} (session: ${key}, total: ${clients[key].ips.size}, timestamp: ${clients[key].ts})`);
 });
 
 tracker.on('complete', (addr, params) => {
@@ -82,7 +82,7 @@ tracker.on('complete', (addr, params) => {
   });
   clients[key].ts = Date.now(); // Always update timestamp on every announce
   
-  console.log(`[+] IP(s) complete: ${ips.join(', ')} (session: ${key}, total: ${clients[key].ips.size})`);
+  console.log(`[+] IP(s) complete: ${ips.join(', ')} (session: ${key}, total: ${clients[key].ips.size}, timestamp: ${clients[key].ts})`);
 });
 
 // Event stream server
