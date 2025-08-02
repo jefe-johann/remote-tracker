@@ -30,11 +30,11 @@ tracker.on('start', (addr, params) => {
   // Parse multiple IPs if comma-separated
   const ips = rawIp.split(',').map(ip => ip.trim()).filter(ip => ip.length > 0);
   
-  // Add each IP individually to the set
+  // Add each IP individually to the set and always update timestamp
   ips.forEach(ip => {
     clients[key].ips.add(ip);
   });
-  clients[key].ts = Date.now();
+  clients[key].ts = Date.now(); // Always update timestamp on every announce
   
   console.log(`[+] IP(s) detected: ${ips.join(', ')} (session: ${key}, total: ${clients[key].ips.size})`);
 });
@@ -53,11 +53,11 @@ tracker.on('update', (addr, params) => {
   // Parse multiple IPs if comma-separated
   const ips = rawIp.split(',').map(ip => ip.trim()).filter(ip => ip.length > 0);
   
-  // Add each IP individually to the set
+  // Add each IP individually to the set and always update timestamp
   ips.forEach(ip => {
     clients[key].ips.add(ip);
   });
-  clients[key].ts = Date.now();
+  clients[key].ts = Date.now(); // Always update timestamp on every announce
   
   console.log(`[+] IP(s) updated: ${ips.join(', ')} (session: ${key}, total: ${clients[key].ips.size})`);
 });
@@ -76,11 +76,11 @@ tracker.on('complete', (addr, params) => {
   // Parse multiple IPs if comma-separated
   const ips = rawIp.split(',').map(ip => ip.trim()).filter(ip => ip.length > 0);
   
-  // Add each IP individually to the set
+  // Add each IP individually to the set and always update timestamp
   ips.forEach(ip => {
     clients[key].ips.add(ip);
   });
-  clients[key].ts = Date.now();
+  clients[key].ts = Date.now(); // Always update timestamp on every announce
   
   console.log(`[+] IP(s) complete: ${ips.join(', ')} (session: ${key}, total: ${clients[key].ips.size})`);
 });
